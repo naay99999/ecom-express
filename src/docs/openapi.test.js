@@ -22,4 +22,15 @@ describe('openApiDocument', () => {
     expect(openApiDocument.paths).toHaveProperty('/api/v1/products/admin/{id}');
     expect(openApiDocument.paths).toHaveProperty('/api/v1/products/{id}/restore');
   });
+
+  it('documents order fulfillment, payments, and shipping methods', () => {
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/orders/{id}/confirm');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/orders/{id}/ship');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/orders/{id}/deliver');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/orders/{id}/refund');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/payments/checkout-sessions');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/payments/webhook');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/shipping-methods');
+    expect(openApiDocument.tags.map((tag) => tag.name)).toEqual(expect.arrayContaining(['Payments', 'Shipping']));
+  });
 });

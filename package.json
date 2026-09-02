@@ -13,7 +13,11 @@
     "test:watch": "vitest",
     "test:integration": "RUN_MONGODB_INTEGRATION=true vitest run src/modules/orders/order.integration.test.js",
     "migrate:price-amount": "node --env-file=.env scripts/migrate-product-price-to-amount.js",
-    "migrate:product-variants": "node --env-file=.env scripts/migrate-products-to-variants.js"
+    "migrate:product-variants": "node --env-file=.env scripts/migrate-products-to-variants.js",
+    "migrate:order-payment-shipping": "node --env-file=.env scripts/migrate-orders-add-payment-shipping-fields.js",
+    "db:seed": "node --env-file=.env scripts/seed.js",
+    "db:clear": "node --env-file=.env scripts/clear-db.js",
+    "db:reset": "npm run db:clear && npm run db:seed"
   },
   "dependencies": {
     "@scalar/express-api-reference": "^0.10.17",
@@ -27,6 +31,7 @@
     "mongoose": "^9.9.4",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
+    "stripe": "^22.6.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {

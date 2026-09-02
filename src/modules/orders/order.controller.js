@@ -39,3 +39,39 @@ export async function cancelOrder(req, res, next) {
     next(err);
   }
 }
+
+export async function confirmOrder(req, res, next) {
+  try {
+    const order = await orderService.confirmOrder(req.params.id, requestContext(req));
+    res.json({ success: true, data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function shipOrder(req, res, next) {
+  try {
+    const order = await orderService.shipOrder(req.params.id, req.body);
+    res.json({ success: true, data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deliverOrder(req, res, next) {
+  try {
+    const order = await orderService.deliverOrder(req.params.id);
+    res.json({ success: true, data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function refundOrder(req, res, next) {
+  try {
+    const order = await orderService.refundOrder(req.params.id, requestContext(req));
+    res.json({ success: true, data: order });
+  } catch (err) {
+    next(err);
+  }
+}

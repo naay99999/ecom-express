@@ -26,6 +26,14 @@ const envSchema = z.object({
   COOKIE_SECRET: z.string().min(1).default('dev-cookie-secret'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+
+  // Optional: COD-only environments (and all existing tests) run fine without
+  // these. Stripe-method checkout/webhook actions fail with a clear 500 if
+  // attempted while unset — see src/config/stripe.js.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_CHECKOUT_SUCCESS_URL: z.string().url().default('http://localhost:3000/checkout/success'),
+  STRIPE_CHECKOUT_CANCEL_URL: z.string().url().default('http://localhost:3000/checkout/cancel'),
 });
 
 function loadEnv() {

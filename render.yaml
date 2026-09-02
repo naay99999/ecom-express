@@ -1,0 +1,75 @@
+# Render Blueprint — see https://render.com/docs/blueprint-spec
+#
+# This provisions the Express API only. Render has no managed MongoDB
+# (only Postgres/Redis/Key Value), and checkout uses MongoDB transactions,
+# which require a replica set (see .docs/mongodb-replica-set.md) — so the
+# database is a separate MongoDB Atlas cluster (free M0 tier is already a
+# 3-node replica set). Create that first, then connect this repo as a
+# Blueprint in the Render dashboard.
+#
+# After the first deploy, fill in every `sync: false` var below in the
+# Render dashboard (Environment tab) — they're deliberately left out of
+# this file so no connection string or secret ends up committed to git.
+services:
+  - type: web
+    name: express-ecommerce-api
+    runtime: node
+    plan: free
+    region: singapore # closest to a Thailand-based audience; change freely
+    branch: main
+    buildCommand: npm ci
+    # Not `npm start`: that script is `node --env-file=.env src/server.js`,
+    # which hard-errors if no literal .env file is present. Render injects
+    # env vars into process.env directly — there's no .env file to load.
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # MongoDB Atlas SRV connection string, e.g.
+      # mongodb+srv://<user>:<password>@<cluster>.mongodb.net/express_ecommerce?retryWrites=true&w=majority
+      - key: MONGO_URI
+        sync: false
+
+      # Random secrets Render generates once at first deploy and then
+      # leaves untouched on redeploys — no need to invent or paste values.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: JWT_ISSUER
+        value: express-ecommerce-api
+      - key: JWT_AUDIENCE
+        value: express-ecommerce-client
+
+      # Explicit frontend origin(s), comma-separated — env.js rejects "*" in
+      # production, so this must be filled in before the API is usable from
+      # a browser.
+      - key: CORS_ORIGIN
+        sync: false
+
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX
+        value: "300"
+      - key: LOG_LEVEL
+        value: info
+
+      # Optional — only needed for Stripe-method checkout/webhooks; COD
+      # checkout works with these unset (see src/config/stripe.js).
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CHECKOUT_SUCCESS_URL
+        sync: false
+      - key: STRIPE_CHECKOUT_CANCEL_URL
+        sync: false

@@ -1,8 +1,8 @@
 # E-commerce Backend Backlog
 
-> Updated: 2026-09-01
+> Updated: 2026-09-02
 >
-> Current scope: the API provides authentication, user profiles/addresses, and a basic product catalog. It is not yet able to complete a purchase.
+> Current scope: the API provides authentication, user profiles/addresses, a product catalog, and a full cart-to-delivery order flow with COD and Stripe payments. All P0 items are done.
 
 ## Current baseline
 
@@ -23,25 +23,25 @@
 
 - [x] Create order, order-item, and shipping-address snapshots.
 - [x] Create checkout that builds an order from the cart.
-- [x] Persist immutable item snapshots: product id, name/slug, unit price, quantity, and zero tax/shipping amounts.
-- [ ] Define and enforce an order state machine: `pending`, `paid`, `processing`, `shipped`, `delivered`, `cancelled`, `refunded`.
-- [ ] Let customers list/detail only their orders; let admins list, detail, and update fulfillment status.
+- [x] Persist immutable item snapshots: product id, name/slug, unit price, quantity, and computed tax/shipping amounts.
+- [x] Define and enforce an order state machine: `pending`, `paid`, `processing`, `shipped`, `delivered`, `cancelled`, `refunded` (plus `expired` for lapsed stock reservations).
+- [x] Let customers list/detail only their orders; let admins list, detail, and update fulfillment status.
 - [x] Use MongoDB transactions and atomic inventory updates to prevent overselling.
-- [ ] Define cancellation, refund, and stock-restoration rules.
+- [x] Define cancellation, refund, and stock-restoration rules.
 
 ### Payments
 
-- [ ] Select a payment provider appropriate for the target market.
-- [ ] Create payment initiation / payment-intent flow.
-- [ ] Verify payment-provider webhooks with signature validation.
-- [ ] Make webhook handling idempotent and retain an event-processing audit trail.
-- [ ] Mark an order as paid only after verified server-side payment confirmation.
+- [x] Select a payment provider appropriate for the target market — COD and Stripe (Checkout Session redirect).
+- [x] Create payment initiation / payment-intent flow — `POST /api/v1/payments/checkout-sessions`.
+- [x] Verify payment-provider webhooks with signature validation.
+- [x] Make webhook handling idempotent and retain an event-processing audit trail (`WebhookEvent` model).
+- [x] Mark an order as paid only after verified server-side payment confirmation (Stripe webhook, or COD delivery).
 
 ### Shipping and fulfillment
 
-- [ ] Support a selected shipping address and shipping method during checkout.
-- [ ] Calculate and persist shipping cost.
-- [ ] Add carrier, tracking number, shipped/delivered timestamps, and fulfillment updates.
+- [x] Support a selected shipping method during checkout, via a pluggable calculation library (`src/utils/shipping/`) so new methods are a registry addition, not a call-site rewrite.
+- [x] Calculate and persist shipping cost.
+- [x] Add carrier, tracking number, shipped/delivered timestamps, and fulfillment updates.
 
 ## P1 — Product and customer experience
 

@@ -21,6 +21,16 @@ export const updateUserSchema = z
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
 
+/**
+ * Stripe's address object (Customer, PaymentIntent shipping, Checkout
+ * session shipping_details, ...) is the same six generic fields for every
+ * country — line1/line2/city/state/postal_code/country, no dedicated
+ * sub-district/district fields — so this schema stays 1:1 with it instead
+ * of growing separate ตำบล/อำเภอ/จังหวัด fields. For a Thai address
+ * (country: 'TH'): line1 = บ้านเลขที่/หมู่/ซอย/ถนน, line2 = ตำบล/แขวง
+ * plus any extra detail, city = อำเภอ/เขต (district), state = จังหวัด
+ * (province, required for TH), postalCode = 5-digit Thai postal code.
+ */
 export const addressSchema = z
   .object({
     label: z.string().trim().min(1).max(50).optional(),
@@ -32,7 +42,15 @@ export const addressSchema = z
     country: z.string().trim().min(2).max(2).toUpperCase(),
     isDefault: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => value.country !== 'TH' || /^\d{5}$/.test(value.postalCode), {
+    message: 'Thai postal codes must be 5 digits',
+    path: ['postalCode'],
+  })
+  .refine((value) => value.country !== 'TH' || !!value.state?.trim(), {
+    message: 'Province (state) is required for Thai addresses',
+    path: ['state'],
+  });
 
 export const listUsersQuerySchema = z
   .object({

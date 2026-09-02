@@ -13,12 +13,12 @@
 const sampleAddress = {
   _id: '665f1a2b3c4d5e6f7a8b9c0d',
   label: 'Home',
-  line1: '221B Baker Street',
-  line2: 'Flat 2',
-  city: 'London',
-  state: 'Greater London',
-  postalCode: 'NW1 6XE',
-  country: 'GB',
+  line1: '99/9 Moo 4, Soi Ladprao 15',
+  line2: 'Khwaeng Chomphon',
+  city: 'Khet Chatuchak',
+  state: 'Bangkok',
+  postalCode: '10900',
+  country: 'TH',
   isDefault: true,
 };
 
@@ -27,7 +27,7 @@ const sampleUser = {
   name: 'Ada Lovelace',
   email: 'ada@example.com',
   role: 'customer',
-  phone: '+44 20 7946 0958',
+  phone: '+66 81 234 5678',
   addresses: [sampleAddress],
   isActive: true,
   lastLoginAt: '2026-09-01T10:00:00.000Z',
@@ -55,6 +55,26 @@ const sampleProduct = {
   isActive: true,
   createdAt: '2026-08-31T09:00:00.000Z',
   updatedAt: '2026-08-31T09:00:00.000Z',
+};
+
+const sampleOrder = {
+  _id: '665f1a2b3c4d5e6f7a8b9c10',
+  orderNumber: 'ORD-M1A2B3C4-D5E6F7',
+  status: 'pending',
+  currency: 'THB',
+  paymentMethod: 'cod',
+  shippingMethod: 'standard',
+  subtotalAmount: 179800,
+  taxAmount: 0,
+  shippingAmount: 4000,
+  totalAmount: 183800,
+  items: [{
+    productId: sampleProduct._id, variantId: sampleProduct.variants[0]._id, name: sampleProduct.name,
+    slug: sampleProduct.slug, sku: sampleProduct.variants[0].sku, options: {}, unitPriceAmount: 89900, quantity: 2, lineTotalAmount: 179800,
+  }],
+  shippingAddress: sampleAddress,
+  createdAt: '2026-09-01T10:00:00.000Z',
+  updatedAt: '2026-09-01T10:00:00.000Z',
 };
 
 const sampleMeta = { page: 1, limit: 20, total: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false };
@@ -87,40 +107,33 @@ export const openApiDocument = {
     title: 'Express E-commerce API (MVP)',
     version: '0.1.0',
     description: `
-A minimal e-commerce backend used to teach core Express API patterns:
-JWT authentication, role-based authorization, input validation, pagination,
-and centralized error handling.
+A minimal e-commerce backend teaching core Express patterns: JWT auth,
+RBAC, validation, pagination, and centralized error handling.
 
-**Scope**: this MVP only implements \`auth\`, \`users\`, and \`products\` — it is
-intentionally not a full storefront (no cart/orders/payments).
+**Scope**: \`auth\`, \`users\`, \`products\`, \`cart\`, \`orders\` (pending → paid/
+processing → shipped → delivered), \`payments\` (COD + Stripe Checkout), and
+pluggable \`shipping\` cost calculation. Not a full storefront — no coupons,
+reviews, or multi-provider payments.
 
-**Response envelope**: every endpoint returns JSON shaped as either
-\`{ "success": true, "data": ... }\` (optionally with a \`meta\` pagination
-block) or \`{ "success": false, "message": "...", "details": [...] }\` on
-error — see the \`ErrorResponse\` schema.
+**Response shape**: \`{ success: true, data, meta? }\`, or \`{ success: false,
+message, details? }\` on error (see \`ErrorResponse\`). \`204\` responses have
+no body.
 
-**Examples**: each operation includes a request example where it accepts
-input and a complete JSON example for each non-empty response. Protected
-operations require the bearer token shown after login; refresh/logout use the
-httpOnly cookie set by register or login. A \`204 No Content\` response has no
-JSON body by design.
-
-**Trying it out**: this page is served by the same Express app as the API,
-so requests you send from here run against your local server for real. Run
-\`POST /api/v1/auth/register\` first, copy the \`accessToken\` from the response, then
-click **Authorize** and paste it in as a Bearer token to try the endpoints
-that require authentication. Your refresh token is also set automatically
-as a cookie in this browser, so \`POST /api/v1/auth/refresh\` will work without any
-extra setup.
+**Trying it out**: requests here hit your real local server. Register, copy
+the \`accessToken\`, then click **Authorize** to try authenticated endpoints.
+The refresh cookie is set automatically.
     `.trim(),
   },
   servers: [{ url: '/', description: 'Same origin as this documentation page' }],
   tags: [
+    { name: 'System', description: 'Server liveness checks' },
     { name: 'Auth', description: 'Registration, login, and session/token management' },
     { name: 'Users', description: 'The current user’s profile, addresses, and admin user management' },
     { name: 'Products', description: 'Product catalog: public browsing and admin management' },
     { name: 'Cart', description: 'Authenticated shopping-cart management' },
-    { name: 'Orders', description: 'Checkout, order history, and cancellation' },
+    { name: 'Orders', description: 'Checkout, order history, cancellation, and admin fulfillment' },
+    { name: 'Payments', description: 'Stripe Checkout Session creation and webhook confirmation' },
+    { name: 'Shipping', description: 'Available shipping methods' },
   ],
   components: {
     securitySchemes: {
@@ -165,29 +178,31 @@ extra setup.
       },
       Address: {
         type: 'object',
+        description: 'Matches Stripe\'s generic address shape (line1/line2/city/state/postalCode/country). For TH: line1 = house/moo/soi/road, line2 = sub-district, city = district, state = province.',
         properties: {
           _id: { type: 'string', example: '665f1a2b3c4d5e6f7a8b9c0d' },
           label: { type: 'string', example: 'Home' },
-          line1: { type: 'string', example: '221B Baker Street' },
-          line2: { type: 'string', nullable: true, example: 'Flat 2' },
-          city: { type: 'string', example: 'London' },
-          state: { type: 'string', nullable: true, example: 'Greater London' },
-          postalCode: { type: 'string', example: 'NW1 6XE' },
-          country: { type: 'string', example: 'GB' },
+          line1: { type: 'string', example: '99/9 Moo 4, Soi Ladprao 15' },
+          line2: { type: 'string', nullable: true, example: 'Khwaeng Chomphon' },
+          city: { type: 'string', example: 'Khet Chatuchak' },
+          state: { type: 'string', nullable: true, example: 'Bangkok' },
+          postalCode: { type: 'string', example: '10900' },
+          country: { type: 'string', example: 'TH' },
           isDefault: { type: 'boolean', example: true },
         },
       },
       AddressInput: {
         type: 'object',
         required: ['line1', 'city', 'postalCode', 'country'],
+        description: 'When country is "TH", state (province) is also required and postalCode must be 5 digits.',
         properties: {
           label: { type: 'string', example: 'Home' },
-          line1: { type: 'string', example: '221B Baker Street' },
-          line2: { type: 'string', example: 'Flat 2' },
-          city: { type: 'string', example: 'London' },
-          state: { type: 'string', example: 'Greater London' },
-          postalCode: { type: 'string', example: 'NW1 6XE' },
-          country: { type: 'string', example: 'GB' },
+          line1: { type: 'string', example: '99/9 Moo 4, Soi Ladprao 15' },
+          line2: { type: 'string', example: 'Khwaeng Chomphon' },
+          city: { type: 'string', example: 'Khet Chatuchak' },
+          state: { type: 'string', example: 'Bangkok' },
+          postalCode: { type: 'string', example: '10900' },
+          country: { type: 'string', example: 'TH' },
           isDefault: { type: 'boolean', example: true },
         },
       },
@@ -351,21 +366,159 @@ extra setup.
     },
     '/api/v1/orders': {
       post: {
-        tags: ['Orders'], summary: 'Checkout the current cart', security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['addressId'], properties: { addressId: { type: 'string' } } } } } },
-        responses: { 201: jsonResponse('Pending order created.', { type: 'object' }, success({ status: 'pending', currency: 'THB' })), 409: errorResponse('Cart is empty or stock is unavailable.', 'One or more products are unavailable') },
+        tags: ['Orders'],
+        summary: 'Checkout the current cart',
+        description: 'Creates a `pending` order. For `paymentMethod: "stripe"`, call POST /payments/checkout-sessions next for the redirect URL.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object', required: ['addressId', 'paymentMethod', 'shippingMethod'],
+                properties: {
+                  addressId: { type: 'string', example: sampleAddress._id },
+                  paymentMethod: { type: 'string', enum: ['cod', 'stripe'], example: 'cod' },
+                  shippingMethod: { type: 'string', description: 'A key from GET /api/v1/shipping-methods.', example: 'standard' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse('Pending order created.', { type: 'object' }, success(sampleOrder)),
+          409: errorResponse('Cart is empty or stock is unavailable.', 'One or more products are unavailable'),
+        },
       },
-      get: { tags: ['Orders'], summary: 'List orders', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Orders.', { type: 'object' }, success([], sampleMeta)) } },
+      get: {
+        tags: ['Orders'],
+        summary: 'List orders — own orders for customers, all orders for admins',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'expired'] } },
+          { name: 'paymentMethod', in: 'query', schema: { type: 'string', enum: ['cod', 'stripe'] } },
+        ],
+        responses: { 200: jsonResponse('Orders.', { type: 'object' }, success([sampleOrder], sampleMeta)) },
+      },
     },
     '/api/v1/orders/{id}': {
-      get: { tags: ['Orders'], summary: 'Get an order', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order.', { type: 'object' }, success({ status: 'pending' })) } },
+      get: { tags: ['Orders'], summary: 'Get an order', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order.', { type: 'object' }, success(sampleOrder)) } },
     },
     '/api/v1/orders/{id}/cancel': {
-      post: { tags: ['Orders'], summary: 'Cancel a pending order', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order cancelled.', { type: 'object' }, success({ status: 'cancelled' })), 409: errorResponse('Order cannot be cancelled.', 'Order can no longer be cancelled') } },
+      post: {
+        tags: ['Orders'],
+        summary: 'Cancel an order (own order, or any order as admin)',
+        description: 'Allowed while pending/paid/processing. Refunds via Stripe first if already paid (→ `refunded`), else → `cancelled`. Stock is always restored.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse('Order cancelled or refunded.', { type: 'object' }, success({ ...sampleOrder, status: 'cancelled' })),
+          409: errorResponse('Order can no longer be cancelled.', 'Order can no longer be cancelled'),
+        },
+      },
+    },
+    '/api/v1/orders/{id}/confirm': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Confirm an order for fulfillment (admin)',
+        description: 'COD orders confirm from `pending`; Stripe orders require `paid` first.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse('Order moved to processing.', { type: 'object' }, success({ ...sampleOrder, status: 'processing' })),
+          403: errorResponse('The current user is not an admin.', 'You do not have permission to perform this action'),
+          409: errorResponse('Order is not in a confirmable state.', 'Order cannot transition to processing'),
+        },
+      },
+    },
+    '/api/v1/orders/{id}/ship': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Mark an order shipped (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { type: 'object', required: ['carrier', 'trackingNumber'], properties: { carrier: { type: 'string', example: 'Kerry Express' }, trackingNumber: { type: 'string', example: 'TH1234567890' } } },
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse('Order moved to shipped.', { type: 'object' }, success({ ...sampleOrder, status: 'shipped', carrier: 'Kerry Express', trackingNumber: 'TH1234567890' })),
+          403: errorResponse('The current user is not an admin.', 'You do not have permission to perform this action'),
+          409: errorResponse('Order is not in a shippable state.', 'Order cannot transition to shipped'),
+        },
+      },
+    },
+    '/api/v1/orders/{id}/deliver': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Mark an order delivered (admin)',
+        description: 'For COD orders, this is also when the order becomes paid — COD has no upfront payment gate.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse('Order moved to delivered.', { type: 'object' }, success({ ...sampleOrder, status: 'delivered' })),
+          403: errorResponse('The current user is not an admin.', 'You do not have permission to perform this action'),
+          409: errorResponse('Order is not in a deliverable state.', 'Order cannot transition to delivered'),
+        },
+      },
+    },
+    '/api/v1/orders/{id}/refund': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Refund a shipped or delivered order (admin)',
+        description: 'For a post-shipment return, beyond /cancel\'s scope. Refunds via Stripe if applicable.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse('Order refunded.', { type: 'object' }, success({ ...sampleOrder, status: 'refunded' })),
+          403: errorResponse('The current user is not an admin.', 'You do not have permission to perform this action'),
+          409: errorResponse('Order is not eligible for refund.', 'Order is not eligible for refund'),
+        },
+      },
+    },
+    '/api/v1/payments/checkout-sessions': {
+      post: {
+        tags: ['Payments'],
+        summary: 'Create a Stripe Checkout Session for a pending Stripe-method order',
+        description: 'Returns a hosted Checkout URL. The order is marked `paid` only once the webhook below confirms it.',
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['orderId'], properties: { orderId: { type: 'string', example: sampleOrder._id } } } } } },
+        responses: {
+          201: jsonResponse('Checkout session created.', { type: 'object' }, success({ url: 'https://checkout.stripe.com/c/pay/cs_test_...', sessionId: 'cs_test_...' })),
+          409: errorResponse('Order is not awaiting payment.', 'Order is not awaiting payment'),
+        },
+      },
+    },
+    '/api/v1/payments/webhook': {
+      post: {
+        tags: ['Payments'],
+        summary: 'Stripe webhook (called by Stripe, not by API clients)',
+        description:
+          'Verifies `Stripe-Signature` against STRIPE_WEBHOOK_SECRET; needs the raw body, so it can\'t be tried from this page. ' +
+          'Idempotent per event id — marks the order `paid` on success, `cancelled` (stock restored) on expiry/failure.',
+        security: [],
+        parameters: [{ name: 'Stripe-Signature', in: 'header', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: jsonResponse('Event processed (or already-processed events acknowledged as a no-op).', { type: 'object' }, { received: true }),
+          400: errorResponse('Missing/invalid signature, or Stripe is not configured.', 'Invalid Stripe webhook signature'),
+        },
+      },
+    },
+    '/api/v1/shipping-methods': {
+      get: {
+        tags: ['Shipping'],
+        summary: 'List available shipping methods',
+        description: 'Use a returned `key` as checkout\'s `shippingMethod`.',
+        security: [],
+        responses: {
+          200: jsonResponse('Shipping methods.', { type: 'object' }, success([{ key: 'standard', label: 'Standard Shipping' }, { key: 'express', label: 'Express Shipping' }])),
+        },
+      },
     },
     '/health': {
       get: {
-        tags: ['Auth'],
+        tags: ['System'],
         summary: 'Health check',
         description: 'Liveness probe. Does not touch the database.',
         security: [],
@@ -454,10 +607,7 @@ extra setup.
       post: {
         tags: ['Auth'],
         summary: 'Refresh the access token',
-        description:
-          'Reads the `refreshToken` httpOnly cookie set by /api/v1/auth/register or /api/v1/auth/login and issues a new access token ' +
-          '(and rotates the refresh token cookie). No request body needed — if you already logged in from this page, ' +
-          'the cookie is sent automatically.',
+        description: 'Reads the `refreshToken` httpOnly cookie, issues a new access token, and rotates the cookie. No request body needed.',
         security: [],
         responses: {
           200: {
@@ -550,7 +700,16 @@ extra setup.
               schema: { $ref: '#/components/schemas/AddressInput' },
               examples: {
                 default: {
-                  value: { label: 'Home', line1: '221B Baker Street', city: 'London', postalCode: 'NW1 6XE', country: 'GB', isDefault: true },
+                  value: {
+                    label: 'Home',
+                    line1: '99/9 Moo 4, Soi Ladprao 15',
+                    line2: 'Khwaeng Chomphon',
+                    city: 'Khet Chatuchak',
+                    state: 'Bangkok',
+                    postalCode: '10900',
+                    country: 'TH',
+                    isDefault: true,
+                  },
                 },
               },
             },
@@ -578,7 +737,7 @@ extra setup.
     '/api/v1/users': {
       get: {
         tags: ['Users'],
-        summary: 'List users (admin only)',
+        summary: 'List users (admin)',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 }, example: 1 },
@@ -611,7 +770,7 @@ extra setup.
     '/api/v1/users/{id}': {
       get: {
         tags: ['Users'],
-        summary: 'Get a user by id (admin only)',
+        summary: 'Get a user by id (admin)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleUser._id }],
         responses: {
@@ -623,7 +782,7 @@ extra setup.
       },
       patch: {
         tags: ['Users'],
-        summary: 'Update any user (admin only)',
+        summary: 'Update any user (admin)',
         description: 'Unlike PATCH /api/v1/users/me, an admin may also set `role` and `isActive` here.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleUser._id }],
@@ -653,7 +812,7 @@ extra setup.
       },
       delete: {
         tags: ['Users'],
-        summary: 'Delete a user (admin only)',
+        summary: 'Delete a user (admin)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleUser._id }],
         responses: {
@@ -666,21 +825,21 @@ extra setup.
     },
     '/api/v1/products/admin': {
       get: {
-        tags: ['Products'], summary: 'List products including archived records (admin only)', security: [{ bearerAuth: [] }],
+        tags: ['Products'], summary: 'List products including archived records (admin)', security: [{ bearerAuth: [] }],
         parameters: [{ name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'archived', 'all'], default: 'all' } }],
         responses: { 200: jsonResponse('Admin product list.', { type: 'object' }, success([sampleProduct], sampleMeta)) },
       },
     },
     '/api/v1/products/admin/{id}': {
       get: {
-        tags: ['Products'], summary: 'Get any product including archived records (admin only)', security: [{ bearerAuth: [] }],
+        tags: ['Products'], summary: 'Get any product including archived records (admin)', security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: jsonResponse('Product.', productEnvelopeSchema, success(sampleProduct)) },
       },
     },
     '/api/v1/products/{id}/restore': {
       post: {
-        tags: ['Products'], summary: 'Restore an archived product (admin only)', security: [{ bearerAuth: [] }],
+        tags: ['Products'], summary: 'Restore an archived product (admin)', security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: jsonResponse('Product restored.', productEnvelopeSchema, success(sampleProduct)) },
       },
@@ -717,7 +876,7 @@ extra setup.
       },
       post: {
         tags: ['Products'],
-        summary: 'Create a product (admin only)',
+        summary: 'Create a product (admin)',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -762,7 +921,7 @@ extra setup.
       },
       patch: {
         tags: ['Products'],
-        summary: 'Update a product (admin only)',
+        summary: 'Update a product (admin)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleProduct._id }],
         requestBody: {
@@ -783,7 +942,7 @@ extra setup.
       },
       delete: {
         tags: ['Products'],
-        summary: 'Archive a product (admin only)',
+        summary: 'Archive a product (admin)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleProduct._id }],
         responses: {

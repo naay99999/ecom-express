@@ -3,7 +3,19 @@ import bcrypt from 'bcrypt';
 
 const { Schema, model } = mongoose;
 
-/** User and embedded-address persistence shape, including password hashing and safe serialization helpers. */
+/**
+ * User and embedded-address persistence shape, including password hashing
+ * and safe serialization helpers.
+ *
+ * Fields mirror Stripe's generic address object 1:1 (line1/line2/city/
+ * state/postalCode/country — Stripe has no separate sub-district/district
+ * fields for any country). For a Thai address (country: 'TH'): line1 =
+ * บ้านเลขที่/หมู่/ซอย/ถนน, line2 = ตำบล/แขวง + extra detail, city =
+ * อำเภอ/เขต, state = จังหวัด. `addressSchema` in user.schema.js enforces
+ * that state + a 5-digit postalCode are required when country is 'TH';
+ * this model schema stays generic (state optional) since not every country
+ * has one.
+ */
 const addressSchema = new Schema(
   {
     label: { type: String, default: 'Home' },
