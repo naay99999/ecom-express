@@ -356,12 +356,16 @@ The refresh cookie is set automatically.
     '/api/v1/cart/items': {
       post: {
         tags: ['Cart'], summary: 'Add an item to the cart', security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['productId', 'variantId', 'quantity'], properties: { productId: { type: 'string' }, variantId: { type: 'string' }, quantity: { type: 'integer', minimum: 1 } } } } } },
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['productId', 'variantId', 'quantity'], properties: { productId: { type: 'string' }, variantId: { type: 'string' }, quantity: { type: 'integer', minimum: 1, maximum: 100 } } } } } },
         responses: { 201: jsonResponse('Item added.', { type: 'object' }, success({ items: [] })), 409: errorResponse('Insufficient stock.', 'Requested quantity is not available') },
       },
     },
     '/api/v1/cart/items/{variantId}': {
-      patch: { tags: ['Cart'], summary: 'Update cart item quantity', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Cart updated.', { type: 'object' }, success({ items: [] })) } },
+      patch: {
+        tags: ['Cart'], summary: 'Update cart item quantity', security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['quantity'], properties: { quantity: { type: 'integer', minimum: 1, maximum: 100 } } } } } },
+        responses: { 200: jsonResponse('Cart updated.', { type: 'object' }, success({ items: [] })) },
+      },
       delete: { tags: ['Cart'], summary: 'Remove a cart item', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Cart updated.', { type: 'object' }, success({ items: [] })) } },
     },
     '/api/v1/orders': {
@@ -392,7 +396,7 @@ The refresh cookie is set automatically.
       },
       get: {
         tags: ['Orders'],
-        summary: 'List orders — own orders for customers, all orders for admins',
+        summary: 'List orders (own orders, or all orders as admin)',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
