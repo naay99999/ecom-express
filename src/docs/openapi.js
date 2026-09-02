@@ -371,8 +371,8 @@ The refresh cookie is set automatically.
     '/api/v1/orders': {
       post: {
         tags: ['Orders'],
-        summary: 'customer - Checkout the current cart',
-        description: 'Creates a `pending` order. For `paymentMethod: "stripe"`, call POST /payments/checkout-sessions next for the redirect URL.',
+        summary: 'Checkout cart',
+        description: 'Requires authentication. Creates a `pending` order. For `paymentMethod: "stripe"`, call POST /payments/checkout-sessions next for the redirect URL.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -396,7 +396,8 @@ The refresh cookie is set automatically.
       },
       get: {
         tags: ['Orders'],
-        summary: 'List orders (own orders, or all orders as admin)',
+        summary: 'List orders',
+        description: 'Requires authentication. Customers see only their own orders; admins see all orders.',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
@@ -408,13 +409,13 @@ The refresh cookie is set automatically.
       },
     },
     '/api/v1/orders/{id}': {
-      get: { tags: ['Orders'], summary: 'Get an order (own order, or any order as admin)', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order.', { type: 'object' }, success(sampleOrder)) } },
+      get: { tags: ['Orders'], summary: 'Get order', description: 'Requires authentication. Customers can get their own orders; admins can get any order.', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order.', { type: 'object' }, success(sampleOrder)) } },
     },
     '/api/v1/orders/{id}/cancel': {
       post: {
         tags: ['Orders'],
-        summary: 'Cancel an order (own order, or any order as admin)',
-        description: 'Allowed while pending/paid/processing. Refunds via Stripe first if already paid (→ `refunded`), else → `cancelled`. Stock is always restored.',
+        summary: 'Cancel order',
+        description: 'Requires authentication. Customers can cancel their own orders; admins can cancel any order. Allowed while pending/paid/processing. Refunds via Stripe first if already paid (→ `refunded`), else → `cancelled`. Stock is always restored.',
         security: [{ bearerAuth: [] }],
         responses: {
           200: jsonResponse('Order cancelled or refunded.', { type: 'object' }, success({ ...sampleOrder, status: 'cancelled' })),
@@ -425,8 +426,8 @@ The refresh cookie is set automatically.
     '/api/v1/orders/{id}/confirm': {
       post: {
         tags: ['Orders'],
-        summary: 'admin - Confirm an order for fulfillment',
-        description: 'COD orders confirm from `pending`; Stripe orders require `paid` first.',
+        summary: 'Confirm order',
+        description: 'Requires admin access. COD orders confirm from `pending`; Stripe orders require `paid` first.',
         security: [{ bearerAuth: [] }],
         responses: {
           200: jsonResponse('Order moved to processing.', { type: 'object' }, success({ ...sampleOrder, status: 'processing' })),
@@ -438,7 +439,8 @@ The refresh cookie is set automatically.
     '/api/v1/orders/{id}/ship': {
       post: {
         tags: ['Orders'],
-        summary: 'admin - Mark an order shipped',
+        summary: 'Mark order as shipped',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -458,8 +460,8 @@ The refresh cookie is set automatically.
     '/api/v1/orders/{id}/deliver': {
       post: {
         tags: ['Orders'],
-        summary: 'admin - Mark an order delivered',
-        description: 'For COD orders, this is also when the order becomes paid — COD has no upfront payment gate.',
+        summary: 'Mark order as delivered',
+        description: 'Requires admin access. For COD orders, this is also when the order becomes paid — COD has no upfront payment gate.',
         security: [{ bearerAuth: [] }],
         responses: {
           200: jsonResponse('Order moved to delivered.', { type: 'object' }, success({ ...sampleOrder, status: 'delivered' })),
@@ -471,8 +473,8 @@ The refresh cookie is set automatically.
     '/api/v1/orders/{id}/refund': {
       post: {
         tags: ['Orders'],
-        summary: 'admin - Refund a shipped or delivered order',
-        description: 'For a post-shipment return, beyond /cancel\'s scope. Refunds via Stripe if applicable.',
+        summary: 'Refund order',
+        description: 'Requires admin access. For a post-shipment return, beyond /cancel\'s scope. Refunds via Stripe if applicable.',
         security: [{ bearerAuth: [] }],
         responses: {
           200: jsonResponse('Order refunded.', { type: 'object' }, success({ ...sampleOrder, status: 'refunded' })),
@@ -497,9 +499,9 @@ The refresh cookie is set automatically.
     '/api/v1/payments/webhook': {
       post: {
         tags: ['Payments'],
-        summary: 'Stripe webhook (called by Stripe, not by API clients)',
+        summary: 'Process Stripe webhook',
         description:
-          'Verifies `Stripe-Signature` against STRIPE_WEBHOOK_SECRET; needs the raw body, so it can\'t be tried from this page. ' +
+          'Called by Stripe, not API clients. Verifies `Stripe-Signature` against STRIPE_WEBHOOK_SECRET; needs the raw body, so it can\'t be tried from this page. ' +
           'Idempotent per event id — marks the order `paid` on success, `cancelled` (stock restored) on expiry/failure.',
         security: [],
         parameters: [{ name: 'Stripe-Signature', in: 'header', required: true, schema: { type: 'string' } }],
@@ -665,7 +667,8 @@ The refresh cookie is set automatically.
     '/api/v1/users/me': {
       get: {
         tags: ['Users'],
-        summary: 'customer - Get the current user’s profile',
+        summary: 'Get my profile',
+        description: 'Requires authentication.',
         security: [{ bearerAuth: [] }],
         responses: {
           200: jsonResponse('The current user.', userEnvelopeSchema, success(sampleUser)),
@@ -674,8 +677,8 @@ The refresh cookie is set automatically.
       },
       patch: {
         tags: ['Users'],
-        summary: 'customer - Update the current user’s profile',
-        description: 'Only `name` and `phone` may be changed here — `password` and `role` are ignored even if sent.',
+        summary: 'Update my profile',
+        description: 'Requires authentication. Only `name` and `phone` may be changed here — `password` and `role` are ignored even if sent.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -695,7 +698,8 @@ The refresh cookie is set automatically.
     '/api/v1/users/me/addresses': {
       post: {
         tags: ['Users'],
-        summary: 'customer - Add an address to the current user',
+        summary: 'Add my address',
+        description: 'Requires authentication.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -728,7 +732,8 @@ The refresh cookie is set automatically.
     '/api/v1/users/me/addresses/{addressId}': {
       delete: {
         tags: ['Users'],
-        summary: 'customer - Remove an address from the current user',
+        summary: 'Remove my address',
+        description: 'Requires authentication.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'addressId', in: 'path', required: true, schema: { type: 'string' }, example: '665f1a2b3c4d5e6f7a8b9c0d' }],
         responses: {
@@ -741,7 +746,8 @@ The refresh cookie is set automatically.
     '/api/v1/users': {
       get: {
         tags: ['Users'],
-        summary: 'admin - List users',
+        summary: 'List users',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 }, example: 1 },
@@ -774,7 +780,8 @@ The refresh cookie is set automatically.
     '/api/v1/users/{id}': {
       get: {
         tags: ['Users'],
-        summary: 'admin - Get a user by id',
+        summary: 'Get user by ID',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleUser._id }],
         responses: {
@@ -786,8 +793,8 @@ The refresh cookie is set automatically.
       },
       patch: {
         tags: ['Users'],
-        summary: 'admin - Update any user',
-        description: 'Unlike PATCH /api/v1/users/me, an admin may also set `role` and `isActive` here.',
+        summary: 'Update user',
+        description: 'Requires admin access. Unlike PATCH /api/v1/users/me, an admin may also set `role` and `isActive` here.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleUser._id }],
         requestBody: {
@@ -816,7 +823,8 @@ The refresh cookie is set automatically.
       },
       delete: {
         tags: ['Users'],
-        summary: 'admin - Delete a user',
+        summary: 'Delete user',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleUser._id }],
         responses: {
@@ -830,7 +838,8 @@ The refresh cookie is set automatically.
     '/api/v1/products': {
       get: {
         tags: ['Products'],
-        summary: 'public - List active products',
+        summary: 'List active products',
+        description: 'No authentication required.',
         security: [],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 }, example: 1 },
@@ -859,7 +868,8 @@ The refresh cookie is set automatically.
       },
       post: {
         tags: ['Products'],
-        summary: 'admin - Create a product',
+        summary: 'Create product',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -894,7 +904,8 @@ The refresh cookie is set automatically.
     '/api/v1/products/{id}': {
       get: {
         tags: ['Products'],
-        summary: 'public - Get a product by id',
+        summary: 'Get product by ID',
+        description: 'No authentication required.',
         security: [],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleProduct._id }],
         responses: {
@@ -904,7 +915,8 @@ The refresh cookie is set automatically.
       },
       patch: {
         tags: ['Products'],
-        summary: 'admin - Update a product',
+        summary: 'Update product',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleProduct._id }],
         requestBody: {
@@ -925,7 +937,8 @@ The refresh cookie is set automatically.
       },
       delete: {
         tags: ['Products'],
-        summary: 'admin - Archive a product',
+        summary: 'Archive product',
+        description: 'Requires admin access.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleProduct._id }],
         responses: {
@@ -938,21 +951,21 @@ The refresh cookie is set automatically.
     },
     '/api/v1/products/admin': {
       get: {
-        tags: ['Products'], summary: 'admin - List products including archived records', security: [{ bearerAuth: [] }],
+        tags: ['Products'], summary: 'List all products', description: 'Requires admin access. Includes archived products.', security: [{ bearerAuth: [] }],
         parameters: [{ name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'archived', 'all'], default: 'all' } }],
         responses: { 200: jsonResponse('Admin product list.', { type: 'object' }, success([sampleProduct], sampleMeta)) },
       },
     },
     '/api/v1/products/admin/{id}': {
       get: {
-        tags: ['Products'], summary: 'admin - Get any product including archived records', security: [{ bearerAuth: [] }],
+        tags: ['Products'], summary: 'Get any product', description: 'Requires admin access. Includes archived products.', security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: jsonResponse('Product.', productEnvelopeSchema, success(sampleProduct)) },
       },
     },
     '/api/v1/products/{id}/restore': {
       post: {
-        tags: ['Products'], summary: 'admin - Restore an archived product', security: [{ bearerAuth: [] }],
+        tags: ['Products'], summary: 'Restore archived product', description: 'Requires admin access.', security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: jsonResponse('Product restored.', productEnvelopeSchema, success(sampleProduct)) },
       },

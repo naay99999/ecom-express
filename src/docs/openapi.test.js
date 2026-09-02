@@ -33,4 +33,18 @@ describe('openApiDocument', () => {
     expect(openApiDocument.paths).toHaveProperty('/api/v1/shipping-methods');
     expect(openApiDocument.tags.map((tag) => tag.name)).toEqual(expect.arrayContaining(['Payments', 'Shipping']));
   });
+
+  it('uses action-focused summaries and describes access requirements separately', () => {
+    const operations = Object.values(openApiDocument.paths)
+      .flatMap((pathItem) => Object.values(pathItem))
+      .filter((operation) => operation?.summary);
+
+    expect(operations.map((operation) => operation.summary)).not.toEqual(expect.arrayContaining([
+      expect.stringMatching(/^(admin|customer|public) - /),
+    ]));
+    expect(openApiDocument.paths['/api/v1/orders/{id}/confirm'].post).toMatchObject({
+      summary: 'Confirm order',
+      description: expect.stringContaining('Requires admin access.'),
+    });
+  });
 });
