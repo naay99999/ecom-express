@@ -38,10 +38,15 @@ export async function checkoutOrder(userId, { addressId, paymentMethod, shipping
 
   try {
     await session.withTransaction(async () => {
-      const [cart, user] = await Promise.all([
-        Cart.findOne({ userId }).session(session),
-        User.findById(userId).session(session),
-      ]);
+      // Sequential, not Promise.all: the MongoDB driver doesn't allow
+      // concurrent operations on the same session/transaction — issuing
+      // both finds at once intermittently throws "Only servers in a
+      // sharded cluster can start a new transaction at the active
+      // transaction number" (code 117) once real network latency is
+      // involved (e.g. Atlas), even though it looks harmless against a
+      // near-zero-latency local replica set.
+      const cart = await Cart.findOne({ userId }).session(session);
+      const user = await User.findById(userId).session(session);
       if (!cart?.items.length) throw new ConflictError('Cart is empty');
       const address = user?.addresses.id(addressId);
       if (!address) throw new NotFoundError('Address not found');
@@ -147,13 +152,15 @@ async function applyOrderTransition(id, { userId, isAdmin, fromStatuses, toStatu
       );
       if (!order) throw new ConflictError(`Order cannot transition to ${toStatus}`);
       if (restoreStock) {
-        await Promise.all(
-          order.items.map((item) => Product.updateOne(
+        // Sequential, not Promise.all — same same-session concurrency
+        // issue as checkoutOrder above.
+        for (const item of order.items) {
+          await Product.updateOne(
             { _id: item.productId, 'variants._id': item.variantId },
             { $inc: { 'variants.$.stock': item.quantity } },
             { session },
-          )),
-        );
+          );
+        }
       }
     });
   } finally {
