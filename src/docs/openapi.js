@@ -404,7 +404,7 @@ The refresh cookie is set automatically.
       },
     },
     '/api/v1/orders/{id}': {
-      get: { tags: ['Orders'], summary: 'Get an order', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order.', { type: 'object' }, success(sampleOrder)) } },
+      get: { tags: ['Orders'], summary: 'Get an order (own order, or any order as admin)', security: [{ bearerAuth: [] }], responses: { 200: jsonResponse('Order.', { type: 'object' }, success(sampleOrder)) } },
     },
     '/api/v1/orders/{id}/cancel': {
       post: {
@@ -826,7 +826,7 @@ The refresh cookie is set automatically.
     '/api/v1/products': {
       get: {
         tags: ['Products'],
-        summary: 'customer - List active products',
+        summary: 'public - List active products',
         security: [],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 }, example: 1 },
@@ -890,7 +890,7 @@ The refresh cookie is set automatically.
     '/api/v1/products/{id}': {
       get: {
         tags: ['Products'],
-        summary: 'customer - Get a product by id',
+        summary: 'public - Get a product by id',
         security: [],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: sampleProduct._id }],
         responses: {
