@@ -1,0 +1,36 @@
+# Express E-commerce API
+
+> Minimal Express + MongoDB e-commerce backend: JWT auth, products, cart,
+> checkout, Stripe payments, and shipping. A teaching example of one
+> consistent module pattern (route → controller → service → model), not a
+> full storefront — expect a narrow feature set.
+
+All business endpoints are versioned under `/api/v1/`. Authenticate by
+calling `POST /api/v1/auth/register` or `POST /api/v1/auth/login`, then send
+the returned `accessToken` as `Authorization: Bearer <token>` on subsequent
+requests. Every response is JSON shaped as either `{"success": true, "data":
+...}` or `{"success": false, "message": "...", "details"?: ...}` with a
+matching HTTP status code.
+
+## Docs
+
+- [OpenAPI document](/openapi.json): Full machine-readable schema (OpenAPI
+  3.1) — every endpoint, request/response body, and auth requirement. Read
+  this first; it's the source of truth for request/response shapes.
+- [Interactive reference](/reference): Human-browsable, try-it-out API
+  explorer rendered from the OpenAPI document.
+- [Health check](/health): `GET`, returns `{"success":true,"message":"ok"}`
+  when the API and its database connection are both up.
+
+## Notes
+
+- Stripe-method checkout is asynchronous: `POST /api/v1/orders` returns an
+  order in `pending` status, and `POST /api/v1/payments/checkout-sessions`
+  returns a redirect URL — but the order only becomes `paid` once Stripe's
+  webhook confirms payment. Poll `GET /api/v1/orders/{id}` rather than
+  assuming payment succeeded right after the checkout redirect.
+- Cash-on-delivery (`paymentMethod: "cod"`) checkout has no payment gate;
+  the order goes straight to `pending` and is confirmed by an admin instead.
+- Admin-only endpoints (product/user management, order fulfillment) return
+  403 for a `customer`-role token — see the OpenAPI document's per-operation
+  `description` for which role each endpoint requires.

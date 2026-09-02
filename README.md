@@ -75,7 +75,9 @@ curl http://localhost:4000/health
 
 Open the interactive API documentation at
 `http://localhost:4000/reference`. The raw OpenAPI document is available at
-`http://localhost:4000/openapi.json`.
+`http://localhost:4000/openapi.json`, and a short [llms.txt](https://llmstxt.org)
+pointer for AI agents calling the API directly is served at
+`http://localhost:4000/llms.txt`.
 
 ## Demo data
 
@@ -105,19 +107,50 @@ The API works without Stripe when you use cash on delivery (`cod`). To test
 Stripe Checkout, add these values to `.env`:
 
 ```dotenv
-STRIPE_SECRET_KEY=sk_test_...
+STRIPE_SECRET_KEY=rk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:3000/checkout/success
 STRIPE_CHECKOUT_CANCEL_URL=http://localhost:3000/checkout/cancel
 ```
 
-Forward Stripe webhook events to the local API with the Stripe CLI:
+For `STRIPE_SECRET_KEY`, create a
+[restricted key](https://docs.stripe.com/keys/restricted-api-keys) (Dashboard
+→ Developers → API keys → **Create restricted key**) rather than using the
+full secret key — this app only ever calls `checkout.sessions.create`, so
+scope the key to **Checkout Sessions: Write** and leave every other resource
+at **None**.
+
+### Local webhook forwarding
+
+Use the Stripe CLI to forward webhook events to your local server instead of
+registering a real endpoint:
 
 ```bash
 stripe listen --forward-to localhost:4000/api/v1/payments/webhook
 ```
 
-Copy the webhook signing secret printed by the CLI into `STRIPE_WEBHOOK_SECRET`.
+Copy the webhook signing secret printed by the CLI into `STRIPE_WEBHOOK_SECRET`
+and restart the API so it picks up the new value.
+
+### Webhook endpoint for a deployed instance
+
+`stripe listen` only forwards to `localhost`. Once the API is reachable on a
+public URL (e.g. deployed per `render.yaml`), register a real webhook
+endpoint instead:
+
+1. Dashboard → Developers → Webhooks → **Add endpoint**, in the same mode
+   (test/live) as the API key you're using.
+2. Endpoint URL: `https://<your-domain>/api/v1/payments/webhook`.
+3. Subscribe to exactly the events `payment.service.js` handles:
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.expired`, `checkout.session.async_payment_failed`.
+4. Copy that endpoint's **Signing secret** into the deployment's
+   `STRIPE_WEBHOOK_SECRET` — it's different from the CLI's local secret and
+   from any other endpoint's secret.
+
+Each `stripe listen` run and each Dashboard endpoint has its own signing
+secret; a local `.env` secret will fail signature verification against a
+deployed endpoint's events and vice versa.
 
 ## Useful commands
 

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -10,6 +13,10 @@ import logger from './config/logger.js';
 import { apiLimiter } from './middleware/rateLimit.middleware.js';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware.js';
 import { openApiDocument } from './docs/openapi.js';
+
+// Read once at startup rather than per-request — the file never changes at
+// runtime, and this keeps GET /llms.txt as cheap as the other docs routes.
+const llmsTxt = readFileSync(fileURLToPath(new URL('./docs/llms.txt', import.meta.url)), 'utf-8');
 
 import authRoutes from './modules/auth/auth.route.js';
 import userRoutes from './modules/users/user.route.js';
@@ -71,6 +78,11 @@ app.get('/health', (req, res) => res.json({ success: true, message: 'ok' }));
 // into Postman/Insomnia/etc — and an interactive page rendered from it.
 app.get('/openapi.json', (req, res) => res.json(openApiDocument));
 app.get('/reference', apiReference({ url: '/openapi.json', pageTitle: 'Express E-commerce API Reference' }));
+
+// llms.txt (https://llmstxt.org): a short, curated pointer for AI agents to
+// /openapi.json and /reference, so an external agent calling this API can
+// discover how without a human first pasting the OpenAPI URL in by hand.
+app.get('/llms.txt', (req, res) => res.type('text/plain').send(llmsTxt));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
