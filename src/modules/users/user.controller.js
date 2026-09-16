@@ -1,9 +1,28 @@
 import * as userService from './user.service.js';
 
+const sudlorProfile = {
+  login: 'KantaKan',
+  id: 140788074,
+  avatarUrl: 'https://avatars.githubusercontent.com/u/140788074?v=4',
+  profileUrl: 'https://github.com/KantaKan',
+  type: 'User',
+  hireable: true,
+  publicRepos: 95,
+  publicGists: 0,
+  followers: 32,
+  following: 7,
+  createdAt: '2023-07-28T06:03:45Z',
+  updatedAt: '2026-09-14T03:48:06Z',
+};
+
 /**
  * User HTTP handlers bridge authenticated request data to user services.
  * Request schemas allow-list self-service fields before they reach these handlers.
  */
+export function getSudlorProfile(req, res) {
+  res.json({ success: true, data: sudlorProfile });
+}
+
 export async function listUsers(req, res, next) {
   try {
     const { data, meta } = await userService.listUsers(req.query);

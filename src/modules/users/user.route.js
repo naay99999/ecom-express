@@ -5,10 +5,12 @@ import { validate } from '../../middleware/validate.middleware.js';
 import { addressIdParamsSchema, addressSchema, listUsersQuerySchema, updateMeSchema, updateUserSchema, userIdParamsSchema } from './user.schema.js';
 
 /**
- * User routes require authentication first; `/me` is self-service while the
- * remaining management endpoints require the admin role.
+ * The public `/sudlor` profile is registered before authentication. `/me` is
+ * self-service while the remaining management endpoints require the admin role.
  */
 const router = Router();
+
+router.get('/sudlor', userController.getSudlorProfile);
 
 router.use(authenticate);
 

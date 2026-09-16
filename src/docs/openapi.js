@@ -695,6 +695,46 @@ The refresh cookie is set automatically.
         },
       },
     },
+    '/api/v1/users/sudlor': {
+      get: {
+        tags: ['Users'],
+        summary: 'Get Sudlor GitHub profile',
+        description: 'Returns a public profile snapshot for GitHub user KantaKan. Authentication is not required.',
+        security: [],
+        responses: {
+          200: jsonResponse(
+            'Public GitHub profile snapshot.',
+            {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                data: {
+                  type: 'object',
+                  properties: {
+                    login: { type: 'string', example: 'KantaKan' },
+                    id: { type: 'integer', example: 140788074 },
+                    avatarUrl: { type: 'string', format: 'uri' },
+                    profileUrl: { type: 'string', format: 'uri' },
+                    publicRepos: { type: 'integer', example: 95 },
+                    followers: { type: 'integer', example: 32 },
+                    following: { type: 'integer', example: 7 },
+                  },
+                },
+              },
+            },
+            success({
+              login: 'KantaKan',
+              id: 140788074,
+              avatarUrl: 'https://avatars.githubusercontent.com/u/140788074?v=4',
+              profileUrl: 'https://github.com/KantaKan',
+              publicRepos: 95,
+              followers: 32,
+              following: 7,
+            }),
+          ),
+        },
+      },
+    },
     '/api/v1/users/me/addresses': {
       post: {
         tags: ['Users'],

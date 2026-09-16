@@ -1,110 +1,51 @@
-# Express E-commerce API
+> โปรเจกต์นี้เป็นแค่ตัวอย่าง backend e-commerce ของสำนักไป่หลอ เพื่อการศึกษา
 
-Example e-commerce backend for learning Express patterns: JWT authentication,
-role-based access control, validation with Zod, MongoDB transactions,
-pagination, Stripe Checkout, and centralized error handling.
+# API อีคอมเมิร์ซด้วย Express
 
-## Prerequisites
+ตัวอย่างแบ็กเอนด์ Express พร้อม JWT, การกำหนดสิทธิ์ตามบทบาท, Zod, MongoDB, Stripe Checkout และการจัดการข้อผิดพลาด
 
-- Node.js 20.6 or later
-- npm
-- MongoDB 7 or later, running as a replica set. Checkout creates orders in a
-  transaction, so a standalone MongoDB server will not work.
-
-## Quick start
-
-Clone the repository and install the locked dependency versions:
+## เริ่มต้นใช้งาน
 
 ```bash
-git clone <repository-url>
-cd express
+git clone https://github.com/naay99999/ecom-express-mongo-example.git
+cd ecom-express-mongo-example
 npm ci
-```
-
-Create your local configuration file:
-
-```bash
 cp .env.example .env
 ```
 
-Generate secrets, then replace `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and
-`COOKIE_SECRET` in `.env`. The two JWT secrets must be different and at least
-32 characters long.
+ไม่ต้องการโคลนและติดตั้งเอง สามารถทดลองเรียก API ได้ที่
+[https://example-ecom-api.naay.cc/reference](https://example-ecom-api.naay.cc/reference)
 
-```bash
-openssl rand -hex 32
-openssl rand -hex 32
-openssl rand -hex 24
-```
-
-### Start MongoDB as a local replica set
-
-If MongoDB is installed locally, start a single-node replica set in one
-terminal. Choose any writable directory for `--dbpath`.
-
-```bash
-mongod --replSet rs0 --dbpath ./data/mongodb
-```
-
-In a second terminal, initialize it once:
-
-```bash
-mongosh --eval 'rs.initiate()'
-```
-
-Set this value in `.env` so the driver connects to that replica set:
+กำหนดค่าใน `.env`:
 
 ```dotenv
-MONGO_URI=mongodb://127.0.0.1:27017/express_ecommerce?replicaSet=rs0
+MONGO_URI=<mongodb-cloud-connection-uri>
+JWT_ACCESS_SECRET=<secret-อย่างน้อย-32-อักขระ>
+JWT_REFRESH_SECRET=<secret-อย่างน้อย-32-อักขระ>
+COOKIE_SECRET=<secret>
 ```
 
-> If you use MongoDB Atlas, create a replica-set deployment and use its
-> connection string for `MONGO_URI` instead.
-
-### Run the API
+`JWT_ACCESS_SECRET` และ `JWT_REFRESH_SECRET` ต้องเป็นคนละค่าและยาวอย่างน้อย 32 อักขระ
 
 ```bash
 npm run dev
-```
-
-The API starts at `http://localhost:4000` by default. Confirm it is running:
-
-```bash
 curl http://localhost:4000/health
 ```
 
-Open the interactive API documentation at
-`http://localhost:4000/reference`. The raw OpenAPI document is available at
-`http://localhost:4000/openapi.json`, and a short [llms.txt](https://llmstxt.org)
-pointer for AI agents calling the API directly is served at
-`http://localhost:4000/llms.txt`.
+API เริ่มที่ `http://localhost:4000` เอกสาร API อยู่ที่ `/reference`, OpenAPI อยู่ที่ `/openapi.json` และ `llms.txt` อยู่ที่ `/llms.txt`
 
-## Demo data
-
-Seed a local development database with an admin, a customer, products, and a
-customer cart:
+## ข้อมูลตัวอย่าง
 
 ```bash
 npm run db:seed
-```
-
-The seed script is not idempotent. To erase all app data from the configured
-development database and seed it again:
-
-```bash
 npm run db:reset
 ```
 
-`db:clear` and `db:reset` permanently delete app data. Do not run them against
-a database that contains data you need.
+`db:clear` และ `db:reset` ลบข้อมูลแอปในฐานข้อมูลที่ตั้งค่าไว้อย่างถาวร ใช้กับฐานข้อมูลสำหรับพัฒนาเท่านั้น
 
-The seed command prints the demo email addresses and passwords in the terminal.
-Use them only for local development.
+## Stripe
 
-## Stripe (optional)
-
-The API works without Stripe when you use cash on delivery (`cod`). To test
-Stripe Checkout, add these values to `.env`:
+การชำระเงินปลายทาง (`cod`) ใช้งานได้โดยไม่ต้องตั้งค่า Stripe หากใช้ Stripe Checkout ให้เพิ่มค่าเหล่านี้ใน `.env`:
 
 ```dotenv
 STRIPE_SECRET_KEY=rk_test_...
@@ -113,69 +54,26 @@ STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:3000/checkout/success
 STRIPE_CHECKOUT_CANCEL_URL=http://localhost:3000/checkout/cancel
 ```
 
-For `STRIPE_SECRET_KEY`, create a
-[restricted key](https://docs.stripe.com/keys/restricted-api-keys) (Dashboard
-→ Developers → API keys → **Create restricted key**) rather than using the
-full secret key — this app only ever calls `checkout.sessions.create`, so
-scope the key to **Checkout Sessions: Write** and leave every other resource
-at **None**.
+ใช้ [restricted key](https://docs.stripe.com/keys/restricted-api-keys) สำหรับ `STRIPE_SECRET_KEY` โดยให้สิทธิ์ **Checkout Sessions: Write** เท่านั้น
 
-### Local webhook forwarding
-
-Use the Stripe CLI to forward webhook events to your local server instead of
-registering a real endpoint:
+เมื่อตั้งค่า Stripe ต้องตั้งค่า webhook ด้วย:
 
 ```bash
 stripe listen --forward-to localhost:4000/api/v1/payments/webhook
 ```
 
-Copy the webhook signing secret printed by the CLI into `STRIPE_WEBHOOK_SECRET`
-and restart the API so it picks up the new value.
+นำ signing secret ที่คำสั่งแสดงมาใส่ใน `STRIPE_WEBHOOK_SECRET` แล้วเริ่ม API ใหม่ สำหรับระบบที่ deploy แล้ว ให้ลงทะเบียน endpoint `https://<your-domain>/api/v1/payments/webhook` และ subscribe event ต่อไปนี้:
 
-### Webhook endpoint for a deployed instance
+`checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `checkout.session.async_payment_failed`
 
-`stripe listen` only forwards to `localhost`. Once the API is reachable on a
-public URL (e.g. deployed per `render.yaml`), register a real webhook
-endpoint instead:
+## คำสั่ง
 
-1. Dashboard → Developers → Webhooks → **Add endpoint**, in the same mode
-   (test/live) as the API key you're using.
-2. Endpoint URL: `https://<your-domain>/api/v1/payments/webhook`.
-3. Subscribe to exactly the events `payment.service.js` handles:
-   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-   `checkout.session.expired`, `checkout.session.async_payment_failed`.
-4. Copy that endpoint's **Signing secret** into the deployment's
-   `STRIPE_WEBHOOK_SECRET` — it's different from the CLI's local secret and
-   from any other endpoint's secret.
-
-Each `stripe listen` run and each Dashboard endpoint has its own signing
-secret; a local `.env` secret will fail signature verification against a
-deployed endpoint's events and vice versa.
-
-## Useful commands
-
-| Command | Purpose |
+| คำสั่ง | รายละเอียด |
 | --- | --- |
-| `npm run dev` | Start the API with automatic reloads. |
-| `npm start` | Start the API once. |
-| `npm test` | Run the test suite once. |
-| `npm run test:watch` | Run tests in watch mode. |
-| `npm run db:seed` | Insert local demo data. |
-| `npm run db:clear` | Permanently delete all app data in the configured database. |
-| `npm run db:reset` | Clear the configured database, then insert demo data. |
-
-## Project structure
-
-```text
-src/
-├── app.js                 # Express app, global middleware, and routes
-├── server.js              # Database connection and HTTP server startup
-├── config/                # Environment, database, logging, and Stripe setup
-├── docs/openapi.js        # Hand-written OpenAPI document
-├── middleware/            # Shared Express middleware
-├── modules/<feature>/     # Routes, controllers, services, models, schemas
-└── utils/                 # Reusable helpers
-```
-
-Keep secrets in `.env`; it is ignored by Git. Use `.env.example` as the safe
-template when adding or documenting configuration.
+| `npm run dev` | เริ่ม API พร้อมรีโหลดอัตโนมัติ |
+| `npm start` | เริ่ม API หนึ่งครั้ง |
+| `npm test` | รันชุดทดสอบ |
+| `npm run test:watch` | รันชุดทดสอบแบบ watch |
+| `npm run db:seed` | เพิ่มข้อมูลตัวอย่าง |
+| `npm run db:clear` | ลบข้อมูลแอปทั้งหมด |
+| `npm run db:reset` | ล้างข้อมูลแล้วเพิ่มข้อมูลตัวอย่าง |

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import request from 'supertest';
 
 const corsState = vi.hoisted(() => ({ options: undefined }));
 
@@ -26,5 +27,22 @@ describe('CORS', () => {
 
     expect(callback).toHaveBeenCalledWith(null, true);
     expect(corsState.options.credentials).toBe(true);
+  });
+});
+
+describe('GET /api/v1/users/sudlor', () => {
+  it('returns KantaKan’s public GitHub profile without authentication', async () => {
+    const response = await request(app).get('/api/v1/users/sudlor');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        login: 'KantaKan',
+        id: 140788074,
+        profileUrl: 'https://github.com/KantaKan',
+        publicRepos: 95,
+      }),
+    });
   });
 });

@@ -7,6 +7,7 @@ describe('openApiDocument', () => {
     expect(openApiDocument.paths).toHaveProperty('/health');
     expect(openApiDocument.paths).toHaveProperty('/api/v1/auth/register');
     expect(openApiDocument.paths).toHaveProperty('/api/v1/users/me');
+    expect(openApiDocument.paths).toHaveProperty('/api/v1/users/sudlor');
     expect(openApiDocument.paths).toHaveProperty('/api/v1/products');
   });
 
